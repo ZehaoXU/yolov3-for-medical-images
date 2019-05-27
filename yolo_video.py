@@ -2,6 +2,8 @@ import sys
 import argparse
 from yolo import YOLO, detect_video
 from PIL import Image
+import os
+os.environ["CUDA_VISIBLE_DEVICES"] = "1"
 
 def detect_img(yolo):
     while True:

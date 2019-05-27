@@ -27,10 +27,10 @@ K.set_session(sess)
 
 
 def _main():
-    annotation_path = 'train06.txt'
-    log_dir = 'logs/006new/'
-    classes_path = 'model_data/train06_classes.txt'
-    anchors_path = 'model_data/train06_anchors.txt'
+    annotation_path = 'train05.txt'
+    log_dir = 'logs/009/'
+    classes_path = 'model_data/train05_classes.txt'
+    anchors_path = 'model_data/coco_anchors.txt'
     class_names = get_classes(classes_path)
     num_classes = len(class_names)
     anchors = get_anchors(anchors_path)
@@ -70,34 +70,18 @@ def _main():
             # use custom yolo_loss Lambda layer.
             'yolo_loss': lambda y_true, y_pred: y_pred})
 
-        batch_size = 32
+        batch_size = 16
         print('Train on {} samples, val on {} samples, with batch size {}.'.format(num_train, num_val, batch_size))
         model.fit_generator(data_generator_wrapper(lines[:num_train], batch_size, input_shape, anchors, num_classes),
                 steps_per_epoch=max(1, num_train//batch_size),
                 validation_data=data_generator_wrapper(lines[num_train:], batch_size, input_shape, anchors, num_classes),
                 validation_steps=max(1, num_val//batch_size),
-                epochs=200,
+                epochs=600,
                 initial_epoch=0,
                 callbacks=[logging, checkpoint, csv_logger1])
         model.save_weights(log_dir + 'trained_weights_stage_1.h5')
     
-    if True:
-        for i in range(185, len(model.layers)):
-            model.layers[i].trainable = True
-        model.compile(optimizer=Adam(lr=1e-3), loss={
-            # use custom yolo_loss Lambda layer.
-            'yolo_loss': lambda y_true, y_pred: y_pred})
-
-        batch_size = 8
-        print('Train on {} samples, val on {} samples, with batch size {}.'.format(num_train, num_val, batch_size))
-        model.fit_generator(data_generator_wrapper(lines[:num_train], batch_size, input_shape, anchors, num_classes),
-                steps_per_epoch=max(1, num_train//batch_size),
-                validation_data=data_generator_wrapper(lines[num_train:], batch_size, input_shape, anchors, num_classes),
-                validation_steps=max(1, num_val//batch_size),
-                epochs=350,
-                initial_epoch=200,
-                callbacks=[logging, checkpoint, reduce_lr, csv_logger2])
-        model.save_weights(log_dir + 'trained_weights_stage_2.h5')
+    
 
     # Unfreeze and continue training, to fine-tune.
     # Train longer if the result is not good.
@@ -113,8 +97,8 @@ def _main():
             steps_per_epoch=max(1, num_train//batch_size),
             validation_data=data_generator_wrapper(lines[num_train:], batch_size, input_shape, anchors, num_classes),
             validation_steps=max(1, num_val//batch_size),
-            epochs=700,
-            initial_epoch=350,
+            epochs=1200,
+            initial_epoch=600,
             callbacks=[logging, checkpoint, reduce_lr, early_stopping, csv_logger3])
         model.save_weights(log_dir + 'trained_weights_final.h5')
 

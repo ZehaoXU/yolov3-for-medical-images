@@ -20,12 +20,12 @@ from keras.utils import multi_gpu_model
 
 class YOLO(object):
     _defaults = {
-        "model_path": 'model_data/yolo.h5',
-        "anchors_path": 'model_data/yolo_anchors.txt',
-        "classes_path": 'model_data/coco_classes.txt',
-        "score" : 0.3,
+        "model_path": 'logs/006new/trained_weights_final.h5',
+        "anchors_path": 'model_data/train06_anchors.txt',
+        "classes_path": 'model_data/train06_classes.txt',
+        "score" : 0.2,
         "iou" : 0.45,
-        "model_image_size" : (416, 416),
+        "model_image_size" : (512, 512),
         "gpu_num" : 1,
     }
 
@@ -71,7 +71,7 @@ class YOLO(object):
         except:
             self.yolo_model = tiny_yolo_body(Input(shape=(None,None,3)), num_anchors//2, num_classes) \
                 if is_tiny_version else yolo_body(Input(shape=(None,None,3)), num_anchors//3, num_classes)
-            self.yolo_model.load_weights(self.model_path) # make sure model, anchors and classes match
+            self.yolo_model.load_weights(self.model_path, by_name=True) # make sure model, anchors and classes match
         else:
             assert self.yolo_model.layers[-1].output_shape[-1] == \
                 num_anchors/len(self.yolo_model.output) * (num_classes + 5), \
@@ -146,20 +146,20 @@ class YOLO(object):
             right = min(image.size[0], np.floor(right + 0.5).astype('int32'))
             print(label, (left, top), (right, bottom))
 
-            if top - label_size[1] >= 0:
-                text_origin = np.array([left, top - label_size[1]])
-            else:
-                text_origin = np.array([left, top + 1])
+            # if top - label_size[1] >= 0:
+            #     text_origin = np.array([left, top - label_size[1]])
+            # else:
+            #     text_origin = np.array([left, top + 1])
 
-            # My kingdom for a good redistributable image drawing library.
-            for i in range(thickness):
-                draw.rectangle(
-                    [left + i, top + i, right - i, bottom - i],
-                    outline=self.colors[c])
-            draw.rectangle(
-                [tuple(text_origin), tuple(text_origin + label_size)],
-                fill=self.colors[c])
-            draw.text(text_origin, label, fill=(0, 0, 0), font=font)
+            # # My kingdom for a good redistributable image drawing library.
+            # for i in range(thickness):
+            #     draw.rectangle(
+            #         [left + i, top + i, right - i, bottom - i],
+            #         outline=self.colors[0])
+            # draw.rectangle(
+            #     [tuple(text_origin), tuple(text_origin + label_size)],
+            #     fill=self.colors[0])
+            # draw.text(text_origin, label, fill=(0, 0, 0), font=font)
             del draw
 
         end = timer()

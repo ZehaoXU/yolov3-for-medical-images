@@ -1,0 +1,6 @@
+Atelectasis
+Cardiomegaly
+Effusion
+Infiltrate
+Pneumonia
+Pneumothorax

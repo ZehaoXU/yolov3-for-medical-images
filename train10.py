@@ -28,7 +28,7 @@ K.set_session(sess)
 
 def _main():
     annotation_path = 'train06.txt'
-    log_dir = 'logs/006new/'
+    log_dir = 'logs/010/'
     classes_path = 'model_data/train06_classes.txt'
     anchors_path = 'model_data/train06_anchors.txt'
     class_names = get_classes(classes_path)
@@ -65,12 +65,15 @@ def _main():
 
     # Train with frozen layers first, to get a stable loss.
     # Adjust num epochs to your dataset. This step is enough to obtain a not bad model.
+    
     if True:
+        for i in range(185):
+            model.layers[i].trainable = True
         model.compile(optimizer=Adam(lr=1e-3), loss={
             # use custom yolo_loss Lambda layer.
             'yolo_loss': lambda y_true, y_pred: y_pred})
 
-        batch_size = 32
+        batch_size = 4
         print('Train on {} samples, val on {} samples, with batch size {}.'.format(num_train, num_val, batch_size))
         model.fit_generator(data_generator_wrapper(lines[:num_train], batch_size, input_shape, anchors, num_classes),
                 steps_per_epoch=max(1, num_train//batch_size),
@@ -78,27 +81,27 @@ def _main():
                 validation_steps=max(1, num_val//batch_size),
                 epochs=200,
                 initial_epoch=0,
-                callbacks=[logging, checkpoint, csv_logger1])
+                callbacks=[logging, checkpoint, reduce_lr, csv_logger1])
         model.save_weights(log_dir + 'trained_weights_stage_1.h5')
-    
+
     if True:
-        for i in range(185, len(model.layers)):
+        for i in range(185, len(model.layers)-3):
             model.layers[i].trainable = True
         model.compile(optimizer=Adam(lr=1e-3), loss={
             # use custom yolo_loss Lambda layer.
             'yolo_loss': lambda y_true, y_pred: y_pred})
 
-        batch_size = 8
+        batch_size = 4
         print('Train on {} samples, val on {} samples, with batch size {}.'.format(num_train, num_val, batch_size))
         model.fit_generator(data_generator_wrapper(lines[:num_train], batch_size, input_shape, anchors, num_classes),
                 steps_per_epoch=max(1, num_train//batch_size),
                 validation_data=data_generator_wrapper(lines[num_train:], batch_size, input_shape, anchors, num_classes),
                 validation_steps=max(1, num_val//batch_size),
-                epochs=350,
+                epochs=400,
                 initial_epoch=200,
                 callbacks=[logging, checkpoint, reduce_lr, csv_logger2])
         model.save_weights(log_dir + 'trained_weights_stage_2.h5')
-
+        
     # Unfreeze and continue training, to fine-tune.
     # Train longer if the result is not good.
     if True:
@@ -156,8 +159,8 @@ def create_model(input_shape, anchors, num_classes, load_pretrained=True, freeze
         if freeze_body in [1, 2]:
             # Freeze darknet53 body or freeze all but 3 output layers.
             num = (185, len(model_body.layers)-3)[freeze_body-1]
-            for i in range(num): model_body.layers[i].trainable = False
-            print('Freeze the first {} layers of total {} layers.'.format(num, len(model_body.layers)))
+            for i in range(len(model_body.layers)): model_body.layers[i].trainable = False
+            print('Train on DarkNet-53 first')
 
     model_loss = Lambda(yolo_loss, output_shape=(1,), name='yolo_loss',
         arguments={'anchors': anchors, 'num_classes': num_classes, 'ignore_thresh': 0.5})(
